@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: provera-profila
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 1 --bind 0.0.0.0:$PORT app:app
+    disk:
+      name: provera-profila-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: COOKIE_SECURE
+        value: '1'
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
