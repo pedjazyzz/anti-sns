@@ -110,8 +110,15 @@ def normalize_profile(value):
         if '/' in name or name.lower() in ('p','reel','reels','stories','explore','accounts','direct'): return None
         if not re.fullmatch(r'[A-Za-z0-9._]{1,30}', name): return None
     else:
-        disallowed=('posts','reel','watch','groups','events','marketplace','share','photo','story.php','permalink.php')
-        if path.strip('/').lower().split('/')[0] in disallowed: return None
+        disallowed=('posts','reel','watch','groups','events','marketplace','photo','story.php','permalink.php')
+        parts=path.strip('/').split('/')
+        if parts[0].lower() == 'share':
+            # Facebook's Share button sometimes produces /share/<token>/.
+            # This is an opaque link, NOT an account username; it can point to content.
+            # Accept only a simple share token and leave identity unverified for moderation.
+            if len(parts) != 2 or not re.fullmatch(r'[A-Za-z0-9_-]{3,100}', parts[1]): return None
+            return platform, 'https://www.facebook.com/share/' + parts[1]
+        if parts[0].lower() in disallowed: return None
         if path.lower()=='/profile.php':
             from urllib.parse import parse_qs
             identity=parse_qs(parsed.query).get('id',[''])[0]
@@ -280,6 +287,8 @@ def profile_label(report):
     if report['display_name']:
         return report['display_name']
     parsed=urlparse(report['profile_url'])
+    if parsed.path.startswith('/share/'):
+        return 'Facebook deljeni link (identitet nije potvrđen)'
     if parsed.path=='/profile.php':
         from urllib.parse import parse_qs
         return 'Facebook nalog '+parse_qs(parsed.query).get('id',[''])[0]
